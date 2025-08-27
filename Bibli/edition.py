@@ -489,86 +489,95 @@ def export_resultats_html_json(resultats, db, chemin_export):
 
 def export_resultats_groupes_xlsx(resultats, db, calendrier, chemin_export):
     wb = Workbook()
-    ws = wb.active
-    ws.title = "Planning par matière"
+    for k,cl_id in enumerate(db['classes']):
+        if k==0:
+            ws = wb.active
+            ws.title = f"Planning {db['classes'][cl_id].nom}"
+        else:
+            ws=wb.create_sheet(f"Planning {db['classes'][cl_id].nom}")
 
-    row_cursor = 1
 
-    # Regroupement par matière ID pour éviter les collisions
-    matieres_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(list))))
-    nom_matiere_par_id = {}
-    toutes_les_semaines = set()
+        row_cursor = 1
 
-    for semaine, planning in resultats.items():
-        toutes_les_semaines.add(semaine)
-        for etu, activites in planning.items():
-            for act in activites:
-                obj, colleur, horaire = act
-                mat_id = obj.id
-                nom_matiere_par_id[mat_id] = obj.nom
-                clef_col = colleur.nom if colleur else ""
-                clef_hor = (horaire.jour, horaire.debut, horaire.duree, getattr(horaire, "salle", ""))
-                matieres_dict[mat_id][clef_col][clef_hor][semaine].append(etu)
 
-    semaines = sorted(toutes_les_semaines)
 
-    for mat_id, colleurs in matieres_dict.items():
-        matiere = nom_matiere_par_id[mat_id]
-        start_row = row_cursor
+        # Regroupement par matière ID pour éviter les collisions
+        matieres_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(list))))
+        nom_matiere_par_id = {}
+        toutes_les_semaines = set()
 
-        # Ligne 1 : fusion et nom matière
-        ws.merge_cells(start_row=row_cursor, start_column=1, end_row=row_cursor, end_column=3)
-        ws.cell(row_cursor, 1, matiere).font = Font(bold=True)
-        ws.cell(row_cursor, 1).alignment = Alignment(horizontal="center")
+        for semaine, planning in resultats.items():
+            toutes_les_semaines.add(semaine)
+            for etu, activites in planning.items():
+                if etu.classe.id==cl_id:
+                    for act in activites:
+                        obj, colleur, horaire = act
+                        mat_id = obj.id
+                        nom_matiere_par_id[mat_id] = obj.nom
+                        clef_col = colleur.nom if colleur else ""
+                        clef_hor = (horaire.jour, horaire.debut, horaire.duree, getattr(horaire, "salle", ""))
+                        matieres_dict[mat_id][clef_col][clef_hor][semaine].append(etu)
 
-        # Ligne 2 : en-têtes des colonnes
-        ws.cell(row_cursor + 1, 1, "Colleur")
-        ws.cell(row_cursor + 1, 2, "Horaire")
-        ws.cell(row_cursor + 1, 3, "Salle")
-        ws.cell(row_cursor + 1, 4, "Semaines")
-        for i, semaine in enumerate(semaines):
-            ws.cell(row_cursor + 1, 5 + i, f"S{semaine}").alignment = Alignment(horizontal="center")
+            semaines = sorted(toutes_les_semaines)
 
-        row_cursor += 2  # Décalage pour données
+        for mat_id, colleurs in matieres_dict.items():
+            matiere = nom_matiere_par_id[mat_id]
+            start_row = row_cursor
 
-        for colleur, horaires in colleurs.items():
-            for (jour, debut, duree, salle), semaines_dict in horaires.items():
-                heure_str = f"{jour} {debut//60:02}:{debut%60:02}"
-                ligne = [colleur, heure_str, salle, ""]
+            # Ligne 1 : fusion et nom matière
+            ws.merge_cells(start_row=row_cursor, start_column=1, end_row=row_cursor, end_column=3)
+            ws.cell(row_cursor, 1, matiere).font = Font(bold=True)
+            ws.cell(row_cursor, 1).alignment = Alignment(horizontal="center")
 
-                for semaine in semaines:
-                    etudiants = semaines_dict.get(semaine, [])
-                    if not etudiants:
-                        ligne.append("")
-                        continue
+            # Ligne 2 : en-têtes des colonnes
+            ws.cell(row_cursor + 1, 1, "Colleur")
+            ws.cell(row_cursor + 1, 2, "Horaire")
+            ws.cell(row_cursor + 1, 3, "Salle")
+            ws.cell(row_cursor + 1, 4, "Semaines")
+            for i, semaine in enumerate(semaines):
+                ws.cell(row_cursor + 1, 5 + i, f"S{semaine}").alignment = Alignment(horizontal="center")
 
-                    groupes = set(e.groupe for e in etudiants)
-                    tous_du_meme_groupe = len(groupes) == 1
-                    groupe = groupes.pop() if tous_du_meme_groupe else None
+            row_cursor += 2  # Décalage pour données
 
-                    if tous_du_meme_groupe:
-                        groupe_complet = [e for e in db["etudiants"].values()
-                                          if e.groupe == groupe and e.classe == etudiants[0].classe]
-                        if set(etudiants) == set(groupe_complet):
-                            contenu = f"G{groupe}"
+            for colleur, horaires in colleurs.items():
+                for (jour, debut, duree, salle), semaines_dict in horaires.items():
+                    heure_str = f"{jour} {debut//60:02}:{debut%60:02}"
+                    ligne = [colleur, heure_str, salle, ""]
+
+                    for semaine in semaines:
+                        etudiants = semaines_dict.get(semaine, [])
+                        if not etudiants:
+                            ligne.append("")
+                            continue
+
+                        groupes = set(e.groupe for e in etudiants)
+                        tous_du_meme_groupe = len(groupes) == 1
+                        groupe = groupes.pop() if tous_du_meme_groupe else None
+
+                        if tous_du_meme_groupe:
+                            groupe_complet = [e for e in db["etudiants"].values()
+                                            if e.groupe == groupe and e.classe == etudiants[0].classe]
+                            if set(etudiants) == set(groupe_complet):
+                                contenu = f"G{groupe}"
+                            else:
+                                contenu = "\n".join(sorted(e.nom for e in etudiants))
                         else:
                             contenu = "\n".join(sorted(e.nom for e in etudiants))
-                    else:
-                        contenu = "\n".join(sorted(e.nom for e in etudiants))
 
-                    ligne.append(contenu)
+                        ligne.append(contenu)
 
-                ws.append(ligne)
-                row_cursor += 1
+                    ws.append(ligne)
+                    row_cursor += 1
 
-        row_cursor += 2  # Espace après chaque matière
+            row_cursor += 2  # Espace après chaque matière
 
-    # Feuille secondaire : liste des groupes
-    ws2 = wb.create_sheet("Groupes")
-    ws2.append(["Classe", "Nom", "Groupe"])
+        # Feuille secondaire : liste des groupes
+        ws2 = wb.create_sheet(f"Groupes {db['classes'][cl_id].nom}")
+        ws2.append(["Nom", "Groupe"])
 
-    for etu in sorted(db["etudiants"].values(), key=lambda e: (e.classe, e.groupe, e.nom)):
-        ws2.append([db["classes"][etu.classe.id].nom, etu.nom, etu.groupe])
+        for etu in sorted(db["etudiants"].values(), key=lambda e: (e.classe, e.groupe, e.nom)):
+            if etu.classe.id==cl_id:
+                ws2.append([ etu.nom, etu.groupe])
 
     dirpath = os.path.dirname(chemin_export)
     if dirpath:
@@ -586,4 +595,5 @@ if __name__=="__main__":
 
     #export_resultats_pdf("Resultats_pdf",resultats,db)
     export_resultats_html_json(resultats, db, "affichage_interactif")
+
     #export_resultats_groupes_xlsx(resultats,db,db['calendrier'],"tableau_extension.xlsx")
