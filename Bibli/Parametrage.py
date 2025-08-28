@@ -1230,7 +1230,7 @@ def afficher_formulaire_edition_classe(app, inner_haut, classe_id,treeview):
         app.aide_widget.insert("1.0", app.help_text)
         app.aide_widget.config(state="disabled")
 
-        construire_arborescence_gauche(app.treeview, app)
+        construire_arborescence_gauche(treeview, app)
 
     tk.Button(inner_haut, text="Modifier les informations de la classe", command=modifier).grid(row=row,column=0,pady=(10, 5))
     tk.Button(inner_haut, text="Supprimer la classe", command=supprimer).grid(row=row,column=1,pady=(0, 10))
@@ -2502,5 +2502,6 @@ if __name__=='__main__':
     fenetre_accueil(root, app)
 
     root.mainloop()
+
 
 
