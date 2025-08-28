@@ -1209,7 +1209,7 @@ def afficher_formulaire_edition_classe(app, inner_haut, classe_id,treeview):
             del app.db["matieres"][mid]
 
         # Supprimer TP
-        app.db["TP"] = {k: v for k, v in app.db["TP"].items() if v.classe.id != classe.id}
+        app.db["TPs"] = {k: v for k, v in app.db["TP"].items() if v.classe.id != classe.id}
 
         # Supprimer étudiants
         app.db["etudiants"] = {k: v for k, v in app.db["etudiants"].items() if v.classe.id != classe.id}
@@ -2500,4 +2500,5 @@ if __name__=='__main__':
     app = ApplicationState()
     root = tk.Tk()
     fenetre_accueil(root, app)
+
     root.mainloop()
