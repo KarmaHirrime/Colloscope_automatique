@@ -1215,7 +1215,7 @@ def afficher_formulaire_edition_classe(app, inner_haut, classe_id,treeview):
         app.db["etudiants"] = {k: v for k, v in app.db["etudiants"].items() if v.classe.id != classe.id}
 
         # Supprimer EDT de la classe
-        for opt,h in classe.edt.items():
+        for h in classe.edt:
             del app.db['horaires'][h.id]
 
         # Supprimer la classe
@@ -2502,4 +2502,5 @@ if __name__=='__main__':
     fenetre_accueil(root, app)
 
     root.mainloop()
+
 
